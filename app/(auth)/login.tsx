@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -7,6 +8,7 @@ import { ActivityIndicator, Image, ImageBackground, StyleSheet, Text, TextInput,
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const [senhaVisivel, setSenhaVisivel] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const [fontsLoaded] = useFonts({
@@ -65,13 +67,27 @@ export default function LoginScreen() {
         keyboardType="email-address"
         autoCapitalize="none"
       />
-      <TextInput
-        style={styles.input}
-        placeholder="Senha"
-        value={senha}
-        onChangeText={setSenha}
-        secureTextEntry
-      />
+  <View style={styles.inputWrapper}>
+  <TextInput
+    style={styles.inputSenha}
+    placeholder="Digite sua senha"
+    secureTextEntry={!senhaVisivel}
+    value={senha}
+    onChangeText={setSenha}
+    placeholderTextColor="#aaa"
+  />
+  <TouchableOpacity
+    onPress={() => setSenhaVisivel(!senhaVisivel)}
+    style={styles.iconSenha}
+  >
+    <Ionicons
+      name={senhaVisivel ? 'eye' : 'eye-off'}
+      size={24}
+      color="gray"
+    />
+  </TouchableOpacity>
+</View>
+
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Entrar</Text>
       </TouchableOpacity>
@@ -119,16 +135,38 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: 'rgba(0, 0, 0, 0.71)',
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    fontFamily: 'sansation_bold',
-    },
+    fontFamily: 'sansation_bold'},
+
+  inputWrapper: {
+    width: '90%',
+    alignSelf: 'center',
+    position: 'relative',
+    marginBottom: 15},
+
+  inputSenha: {
+    height: 50,
+    borderColor: 'rgba(255, 179, 179, 0.53)', 
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingLeft: 10,
+    paddingRight: 45, // espaço para o ícone
+    fontSize: 18,
+    color: 'rgba(0, 0, 0, 0.71)',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    fontFamily: 'sansation_bold'},
+
+  iconSenha: {
+    position: 'absolute',
+    right: 15,
+    top: 13},
 
   button: { 
-  backgroundColor: '#FF5B5B', 
-  width: '80%',
-  alignSelf: 'center',
-  paddingVertical: 15, 
-  borderRadius: 10,
-  marginTop: 30 },
+    backgroundColor: '#FF5B5B', 
+    width: '80%',
+    alignSelf: 'center',
+    paddingVertical: 15, 
+    borderRadius: 10,
+    marginTop: 30 },
   
   buttonText: { 
     color: '#fff', 

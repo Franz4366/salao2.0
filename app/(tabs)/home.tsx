@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: -200,
     top: -200,
-    backgroundColor: 'rgb(255, 89, 180)',
+    backgroundColor: '#f8a6ad',
     borderRadius: 80,
   },
 });
