@@ -1,10 +1,10 @@
 import { supabase } from '@/lib/supabase';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
 import React, { useEffect, useRef, useState } from 'react';
-import { FlatList, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Dimensions, FlatList, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
 dayjs.locale('pt-br');
 
 type Cliente = {
@@ -25,29 +25,59 @@ export default function AgendamentoScreen() {
   const [profissionalSelecionado, setProfissionalSelecionado] = useState<string | null>(null);
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
 
-const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  
+  useEffect(() => {
+      const indexHoje = hoje.date() - 1;
+      const larguraDia = 60;
+      const offset = indexHoje * larguraDia;
+      scrollRef.current?.scrollTo({ x: offset, animated: true });
+    }, []);
 
-useEffect(() => {
-  const indexHoje = hoje.date() - 1;
-  const larguraDia = 60;
-  const offset = indexHoje * larguraDia;
-  scrollRef.current?.scrollTo({ x: offset, animated: true });}, []);
+  useEffect(() => {
+    const carregarProfissionais = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, nome, photo_url');
 
-useEffect(() => {
-  const carregarProfissionais = async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, nome, photo_url');
+      if (error) {
+        console.error('Erro ao carregar profissionais:', error.message);
+      } else {
+        setProfissionais(data || []);
+      }
+    };
 
-    if (error) {
-      console.error('Erro ao carregar profissionais:', error.message);
-    } else {
-      setProfissionais(data || []);
-    }
+    carregarProfissionais();
+  }, []);
+
+  const selecionarDia = (dia: dayjs.Dayjs) => {
+    const screenWidth = Dimensions.get('window').width;
+    const larguraDia = 60;
+    const margemItem = 10;
+    const diaFormatado = dia.format('YYYY-MM-DD');
+    const hojeFormatado = hoje.format('YYYY-MM-DD');
+  
+    const novoDiaSelecionado = diaFormatado === diaSelecionado
+      ? hojeFormatado
+      : diaFormatado;
+  
+    setDiaSelecionado(novoDiaSelecionado);
+const indexDia = parseInt(dayjs(novoDiaSelecionado).format('D'), 10) - 1;
+
+  const itemTotal = larguraDia + margemItem;
+  const offset = indexDia * itemTotal - (screenWidth / 2 - larguraDia / 2);
+  const scrollX = offset < 0 ? 0 : offset;
+
+  scrollRef.current?.scrollTo({ x: scrollX, animated: true });
+};
+
+const gerarSemana = () => {
+    const start = mesAtual.startOf('week').add(1, 'day');
+    return Array.from({ length: 7 }, (_, i) => start.add(i, 'day'));
   };
 
-  carregarProfissionais();
-}, []);
+  const semanaDias = gerarSemana();
+
   const buscarClientes = async (texto: string) => {
     setBusca(texto);
 
@@ -69,224 +99,204 @@ useEffect(() => {
     setSugestoes(data || []);
   };
 
-  const gerarSemana = () => {
-    const start = mesAtual.startOf('week').add(1, 'day');
-    return Array.from({ length: 7 }, (_, i) => start.add(i, 'day'));
+  const agendar = async () => {
+    const horaSelecionada = dayjs(dataHoraSelecionada).format('HH:mm');
+    const dataSelecionada = diaSelecionado;
+
+    if (!clienteSelecionado) {
+      alert('Por favor, selecione um cliente.');
+      return;
+    }
+
+    if (!dataSelecionada) {
+      alert('Por favor, selecione uma data.');
+      return;
+    }
+
+    if (!horaSelecionada) {
+      alert('Por favor, selecione uma hora.');
+      return;
+    }
+
+    if (!profissionalSelecionado) {
+      alert('Por favor, selecione um profissional.');
+      return;
+    }
+
+    const { error } = await supabase.from('agendamentos').insert({
+      cliente_id: clienteSelecionado.id,
+      data: dataSelecionada,
+      hora: horaSelecionada,
+      comentario: comentario,
+      profissional_id: profissionalSelecionado,
+    });
+
+    if (error) {
+      alert('Erro ao agendar: ' + error.message);
+    } else {
+      alert('Agendamento realizado com sucesso!');
+      setBusca('');
+      setClienteSelecionado(null);
+      setComentario('');
+      setProfissionalSelecionado(null);
+    }
   };
 
-  const semanaDias = gerarSemana();
+    return (
+    <View style={styles.container}>
+      <View style={styles.headerCalendario}>
+        <View style={styles.mesContainer}>
+          <TouchableOpacity onPress={() => setMesAtual(mesAtual.subtract(1, 'month'))}>
+            <Text style={styles.seta}>&lt;</Text>
+          </TouchableOpacity>
 
-  const selecionarDia = (dia: Dayjs) => {
-    const diaFormatado = dia.format('YYYY-MM-DD');
-    if (diaFormatado === diaSelecionado) {
-      setDiaSelecionado(hoje.format('YYYY-MM-DD'));
-    } else {
-      setDiaSelecionado(diaFormatado);
-    }
-    };
+          <Text style={styles.mesTexto}>
+            {mesAtual.format('MMMM').replace(/^./, str => str.toUpperCase())}
+          </Text>
 
- const agendar = async () => {
-  const horaSelecionada = dayjs(dataHoraSelecionada).format('HH:mm');
-  const dataSelecionada = diaSelecionado;
+          <TouchableOpacity onPress={() => setMesAtual(mesAtual.add(1, 'month'))}>
+            <Text style={styles.seta}>&gt;</Text>
+          </TouchableOpacity>
+        </View>
 
-  if (!clienteSelecionado) {
-    alert('Por favor, selecione um cliente.');
-    return;
-  }
+        <View style={styles.diasContainer}>
+          <ScrollView
+            horizontal
+            ref={scrollRef}
+            showsHorizontalScrollIndicator={false}
+          >
+            {Array.from({ length: mesAtual.daysInMonth() }, (_, i) => {
+              const diaCompleto = mesAtual.date(i + 1);
+              const diaFormatado = diaCompleto.format('YYYY-MM-DD');
+              const isSelected = diaFormatado === diaSelecionado;
+              const isToday = diaFormatado === hoje.format('YYYY-MM-DD');
 
-  if (!dataSelecionada) {
-    alert('Por favor, selecione uma data.');
-    return;
-  }
-
-  if (!horaSelecionada) {
-    alert('Por favor, selecione uma hora.');
-    return;
-  }
-
-  if (!profissionalSelecionado) {
-    alert('Por favor, selecione um profissional.');
-    return;
-  }
-
-  const { error } = await supabase.from('agendamentos').insert({
-    cliente_id: clienteSelecionado.id,
-    data: dataSelecionada,
-    hora: horaSelecionada,
-    comentario: comentario,
-    profissional_id: profissionalSelecionado,
-  });
-
-  if (error) {
-    alert('Erro ao agendar: ' + error.message);
-  } else {
-    alert('Agendamento realizado com sucesso!');
-    setBusca('');
-    setClienteSelecionado(null);
-    setComentario('');
-    setProfissionalSelecionado(null);
-  }
-};
-
-  return (
-  <View style={styles.container}>
-    <View style={styles.headerCalendario}>
-      <View style={styles.mesContainer}>
-        <TouchableOpacity onPress={() => setMesAtual(mesAtual.subtract(1, 'month'))}>
-          <Text style={styles.seta}>&lt;</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.mesTexto}>
-          {mesAtual.format('MMMM').replace(/^./, str => str.toUpperCase())}
-        </Text>
-
-        <TouchableOpacity onPress={() => setMesAtual(mesAtual.add(1, 'month'))}>
-          <Text style={styles.seta}>&gt;</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.diasContainer}>
-        <ScrollView
-          horizontal
-          ref={scrollRef}
-          showsHorizontalScrollIndicator={false}
-        >
-          {Array.from({ length: mesAtual.daysInMonth() }, (_, i) => {
-            const diaCompleto = mesAtual.date(i + 1);
-            const diaFormatado = diaCompleto.format('YYYY-MM-DD');
-            const isSelected = diaFormatado === diaSelecionado;
-            const isToday = diaFormatado === hoje.format('YYYY-MM-DD');
-
-            return (
-              <TouchableOpacity
-                key={diaFormatado}
-                onPress={() => selecionarDia(diaCompleto)}
-                style={styles.diaItem}
-              >
-                <Text style={styles.diaSemana}>
-                  {diaCompleto.format('ddd').replace(/^./, s => s.toUpperCase())}
-                </Text>
-                <View
-                  style={[
-                    styles.diaNumeroContainer,
-                    isSelected && styles.diaSelecionado,
-                  ]}
+              return (
+                <TouchableOpacity
+                  key={diaFormatado}
+                  onPress={() => selecionarDia(diaCompleto)}
+                  style={styles.diaItem}
                 >
-                  <Text
+                  <Text style={styles.diaSemana}>
+                    {diaCompleto.format('ddd').replace(/^./, s => s.toUpperCase())}
+                  </Text>
+                  <View
                     style={[
-                      styles.diaNumero,
-                      isSelected && styles.diaNumeroSelecionado,
+                      styles.diaNumeroContainer,
+                      isSelected && styles.diaSelecionado,
                     ]}
                   >
-                    {diaCompleto.date()}
-                  </Text>
-                </View>
-                {isToday && <View style={styles.pontoVermelho} />}
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+                    <Text
+                      style={[
+                        styles.diaNumero,
+                        isSelected && styles.diaNumeroSelecionado,
+                      ]}
+                    >
+                      {diaCompleto.date()}
+                    </Text>
+                  </View>
+                  {isToday && <View style={styles.pontoVermelho} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
       </View>
-    </View>
 
-    <TextInput
-      style={styles.input}
-      placeholder="Buscar cliente..."
-      value={busca}
-      onChangeText={buscarClientes}
-    />
-
-    {sugestoes.length > 0 && (
-      <FlatList
-        data={sugestoes}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => {
-              setBusca(item.nome);
-              setClienteSelecionado(item);
-              setSugestoes([]);
-            }}
-            style={styles.itemSugestao}
-          >
-            <Text style={styles.nomeCliente}>{item.nome}</Text>
-          </TouchableOpacity>
-        )}
-        style={styles.listaSugestoes}
-      />
-    )}
-
-    <View style={{ marginHorizontal: 20, marginTop: 2 }}>
       <TextInput
-        style={styles.campoComentario}
-        placeholder="Digite os comentários..."
-        value={comentario}
-        onChangeText={setComentario}
-        multiline
-        numberOfLines={4}
-        textAlignVertical="top"
+        style={styles.input}
+        placeholder="Buscar cliente..."
+        value={busca}
+        onChangeText={buscarClientes}
       />
+
+      {sugestoes.length > 0 && (
+        <FlatList
+          data={sugestoes}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              onPress={() => {
+                setBusca(item.nome);
+                setClienteSelecionado(item);
+                setSugestoes([]);
+              }}
+              style={styles.itemSugestao}
+            >
+              <Text style={styles.nomeCliente}>{item.nome}</Text>
+            </TouchableOpacity>
+          )}
+          style={styles.listaSugestoes}
+        />
+      )}
+
+      <View style={{ marginHorizontal: 20, marginTop: 2 }}>
+        <TextInput
+          style={styles.campoComentario}
+          placeholder="Digite os comentários..."
+          value={comentario}
+          onChangeText={setComentario}
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+        />
+      </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.profissionaisContainer}
+      >
+        {profissionais.map((prof) => (
+          <TouchableOpacity
+            key={prof.id}
+            style={[
+              styles.profissionalItem,
+              profissionalSelecionado === prof.id && styles.profissionalSelecionado,
+            ]}
+            onPress={() => setProfissionalSelecionado(prof.id)}
+          >
+            <Image source={{ uri: prof.photo_url }} style={styles.fotoProfissional} />
+            <Text style={styles.nomeProfissional}>{prof.nome}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <TouchableOpacity
+        style={styles.botaoRelogio}
+        onPress={() => setMostrarRelogio(true)}
+      >
+        <Text style={styles.botaoRelogioTexto}>
+          {dayjs(dataHoraSelecionada).format('HH:mm')}
+        </Text>
+      </TouchableOpacity>
+
+      {mostrarRelogio && (
+        <DateTimePicker
+          value={dataHoraSelecionada}
+          mode="time"
+          is24Hour={true}
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(event, selectedDate) => {
+            setMostrarRelogio(false);
+            if (selectedDate) {
+              setDataHoraSelecionada(selectedDate);
+            }
+          }}
+        />
+      )}
+
+      <TouchableOpacity style={styles.botaoAgendar} onPress={agendar}>
+        <Text style={styles.botaoAgendarTexto}>Agendar</Text>
+      </TouchableOpacity>
     </View>
-<ScrollView
-  horizontal
-  showsHorizontalScrollIndicator={false}
-  contentContainerStyle={styles.profissionaisContainer}
->
-  {profissionais.map((prof) => (
-    <TouchableOpacity
-      key={prof.id}
-      style={[
-        styles.profissionalItem,
-        profissionalSelecionado === prof.id && styles.profissionalSelecionado,
-      ]}
-      onPress={() => setProfissionalSelecionado(prof.id)}
-    >
-      <Image
-        source={{ uri: prof.photo_url}}
-        style={styles.fotoProfissional}
-      />
-      <Text style={styles.nomeProfissional}>{prof.nome}</Text>
-    </TouchableOpacity>
-  ))}
-</ScrollView>
-
-  <TouchableOpacity
-    style={styles.botaoRelogio}
-    onPress={() => setMostrarRelogio(true)}
-  >
-    <Text style={styles.botaoRelogioTexto}>
-      {dayjs(dataHoraSelecionada).format('HH:mm')}
-    </Text>
-  </TouchableOpacity>
-
-  {mostrarRelogio && (
-    <DateTimePicker
-      value={dataHoraSelecionada}
-      mode="time"
-      is24Hour={true}
-      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-      onChange={(event, selectedDate) => {
-        setMostrarRelogio(false);
-        if (selectedDate) {
-          setDataHoraSelecionada(selectedDate);
-        }
-      }}
-    />
-  )}
-
-    <TouchableOpacity
-      style={styles.botaoAgendar}
-      onPress={agendar}
-    >
-      <Text style={styles.botaoAgendarTexto}>Agendar</Text>
-    </TouchableOpacity>
-  </View>
-);
-};
-
+  );
+}
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+  },
   input: {
     margin: 20,
     padding: 10,
@@ -338,13 +348,13 @@ const styles = StyleSheet.create({
   diaNumeroContainer: {
     width: 34,
     height: 34,
-    borderRadius: 17,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   diaSelecionado: {
     backgroundColor: 'black',
-    borderRadius: 17,
   },
   diaNumero: {
     fontSize: 14,
@@ -361,21 +371,6 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     marginTop: 2,
   },
-  agendamento: {
-    marginBottom: 20,
-  },
-  agendamentoLinha: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  agendamentoTextoContainer: {
-    flex: 1,
-  },
-  nomeCliente: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
   itemSugestao: {
     padding: 10,
     borderBottomWidth: 1,
@@ -387,6 +382,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     borderColor: '#ccc',
     borderRadius: 8,
+  },
+  nomeCliente: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   campoComentario: {
     borderWidth: 1,
@@ -407,11 +406,6 @@ const styles = StyleSheet.create({
     marginRight: 10,
     padding: 15,
     borderRadius: 10,
-  },
-  profissionalNome: {
-    fontSize: 14,
-    color: 'black',
-    marginTop: 5,
   },
   profissionalSelecionado: {
     backgroundColor: 'rgba(248, 166, 173, 0.51)',

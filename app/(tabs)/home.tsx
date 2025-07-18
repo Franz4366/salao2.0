@@ -11,7 +11,11 @@ type Cliente = {
 };
 
 type Agendamento = {
-  id: string;
+   id: string;
+  profissional_id: string;
+  profissional: {
+    nome: string;
+  }
   cliente_id: string;
   cliente: {
     nome: string;
@@ -19,9 +23,9 @@ type Agendamento = {
   comentario: string;
   data: string;
   hora: string;
-};
+  };
 
-export default function home() {
+export default function Home() {
   const [nomeUsuario, setNomeUsuario] = useState('');
   const [fotoUsuario, setFotoUsuario] = useState('');
   const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
@@ -132,7 +136,7 @@ export default function home() {
           ...a,
           cliente: a.clientes,
         }));
-        setAgendamentos(ajustado);
+        setAgendamentos(ajustado as Agendamento[]);
       } else {
         console.error('Erro ao buscar agendamentos:', error?.message);
       }
@@ -271,12 +275,16 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   cardSemAniversariante: {
-    backgroundColor: '#e1e1e1',
+    backgroundColor: 'rgb(41, 240, 240) 0.77)',
     borderRadius: 30,
     width: 340,
     height: 120,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 5,
   },
   cardTopo: {
     flex: 1,
@@ -313,27 +321,37 @@ const styles = StyleSheet.create({
     color: 'rgba(0, 0, 0, 0.71)',
     fontSize: 20,
     fontFamily: 'sansation_bold',
-    marginLeft: 4,
+    marginLeft: 10,
   },
   agendamentosContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
     flex: 1,
-    marginTop: 20,
+    marginTop: 10,
   },
   agendamento: {
     paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderColor: '#ddd',
+    borderBottomWidth: 2,
+    backgroundColor: '#f8a6ad',
+    marginBottom: 5,
+    borderBottomColor: '#e1e1e1',
+    width: '100%',
+    borderRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
+    overflow: 'hidden',
   },
   agendamentoLinha: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginLeft: 10,
   },
   hora: {
     alignSelf: 'center',
     fontWeight: 'bold',
     width: 60,
     fontSize: 16,
+    marginLeft: 10,
   },
   agendamentoTextoContainer: {
     flex: 1,

@@ -44,16 +44,34 @@ export default function TabLayout() {
       options={{
         title: 'Agendamentos',
         tabBarIcon: ({ color, size }) => (
+          <Ionicons name="add-circle-outline" color={color} size={size} />
+        ),
+      }}
+    />
+    <Tabs.Screen
+      name="agenda"
+      options={{
+        title: 'Agenda',
+        tabBarIcon: ({ color, size }) => (
           <Ionicons name="calendar-number-outline" color={color} size={size} />
         ),
       }}
     />
     <Tabs.Screen
-      name="explore"
+      name="cadastroCliente"
       options={{
-        title: 'Explore',
+        title: 'Cadastro',
         tabBarIcon: ({ color, size }) => (
-          <Ionicons name="compass-outline" color={color} size={size} />
+          <Ionicons name="person-add-outline" color={color} size={size} />
+        ),
+      }}
+    />
+    <Tabs.Screen
+      name="perfil"
+      options={{
+        title: 'Perfil',
+        tabBarIcon: ({ color, size }) => (
+          <Ionicons name="person-outline" color={color} size={size} />
         ),
       }}
     />
